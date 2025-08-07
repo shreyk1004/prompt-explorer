@@ -19,6 +19,13 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   async function onScan() {
+    console.log("Scan inputs:", {
+      repoUrl: repoUrl || undefined,
+      localPath: localPath || undefined,
+      branch,
+      hasToken: !!token
+    });
+    
     setLoading(true);
     setError(null);
     setResult(null);
@@ -75,13 +82,26 @@ export default function Home() {
               onChange={(e) => setToken(e.target.value)}
             />
           </div>
-          <button
-            className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
-            onClick={onScan}
-            disabled={loading || (!repoUrl && !localPath) || !token}
-          >
-            {loading ? "Scanning..." : "Scan repo"}
-          </button>
+          <div className="flex gap-3">
+            <button
+              className="bg-black text-white rounded px-4 py-2 disabled:opacity-50 flex-1"
+              onClick={onScan}
+              disabled={loading || (!repoUrl && !localPath) || !token}
+            >
+              {loading ? "Scanning..." : "Scan repo"}
+            </button>
+            <button
+              className="bg-gray-500 text-white rounded px-4 py-2"
+              onClick={() => {
+                setRepoUrl("");
+                setLocalPath("/Users/shreykakkar/Desktop/github-projects/new-procuro2");
+                setToken("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJsb2NhbC1zY2FuIiwiaWF0IjoxNzU0NjA0NjE5fQ.axuv4DrXjrsdu15Jex8HqWwIslorqPGBuvfOQUHigVc");
+                console.log("Test button clicked - fields populated");
+              }}
+            >
+              Test
+            </button>
+          </div>
         </div>
 
         {error && (
@@ -92,15 +112,15 @@ export default function Home() {
           <div className="space-y-4">
             <div>
               <h2 className="font-medium">Repo</h2>
-              <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">{JSON.stringify(result.repo, null, 2)}</pre>
+              <pre className="text-xs bg-gray-200 text-gray-900 p-3 rounded overflow-x-auto">{JSON.stringify(result.repo, null, 2)}</pre>
             </div>
             <div>
               <h2 className="font-medium">Extracted (Python)</h2>
-              <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">{JSON.stringify(result.extracted?.python || [], null, 2)}</pre>
+              <pre className="text-xs bg-gray-200 text-gray-900 p-3 rounded overflow-x-auto">{JSON.stringify(result.extracted?.python || [], null, 2)}</pre>
             </div>
             <div>
               <h2 className="font-medium">Secrets</h2>
-              <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">{JSON.stringify(result.secrets || [], null, 2)}</pre>
+              <pre className="text-xs bg-gray-200 text-gray-900 p-3 rounded overflow-x-auto">{JSON.stringify(result.secrets || [], null, 2)}</pre>
             </div>
           </div>
         )}
