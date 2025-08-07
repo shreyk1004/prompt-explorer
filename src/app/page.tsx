@@ -1,103 +1,103 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+
+type ScanResponse = {
+  ok: boolean;
+  repo: { url: string; branch: string; path: string };
+  extracted: { python: Array<Record<string, unknown>> };
+  secrets: Array<{ match: string; filePath: string; line: number }>;
+};
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [repoUrl, setRepoUrl] = useState("");
+  const [branch, setBranch] = useState("main");
+  const [token, setToken] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<ScanResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  async function onScan() {
+    setLoading(true);
+    setError(null);
+    setResult(null);
+    try {
+      const res = await fetch("/api/scan", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ repoUrl, branch }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.error || "Request failed");
+      }
+      setResult(data);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      setError(message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen p-8">
+      <div className="max-w-3xl mx-auto space-y-6">
+        <h1 className="text-2xl font-semibold">Prompt Explorer</h1>
+        <div className="space-y-3">
+          <input
+            className="w-full border rounded px-3 py-2"
+            placeholder="Git URL (e.g., https://github.com/owner/repo.git)"
+            value={repoUrl}
+            onChange={(e) => setRepoUrl(e.target.value)}
+          />
+          <div className="flex gap-3">
+            <input
+              className="flex-1 border rounded px-3 py-2"
+              placeholder="Branch (default: main)"
+              value={branch}
+              onChange={(e) => setBranch(e.target.value)}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+            <input
+              className="flex-1 border rounded px-3 py-2"
+              placeholder="JWT (Authorization Bearer)"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+          </div>
+          <button
+            className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
+            onClick={onScan}
+            disabled={loading || !repoUrl || !token}
           >
-            Read our docs
-          </a>
+            {loading ? "Scanning..." : "Scan repo"}
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        {error && (
+          <div className="text-red-600 text-sm">{error}</div>
+        )}
+
+        {result && (
+          <div className="space-y-4">
+            <div>
+              <h2 className="font-medium">Repo</h2>
+              <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">{JSON.stringify(result.repo, null, 2)}</pre>
+            </div>
+            <div>
+              <h2 className="font-medium">Extracted (Python)</h2>
+              <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">{JSON.stringify(result.extracted?.python || [], null, 2)}</pre>
+            </div>
+            <div>
+              <h2 className="font-medium">Secrets</h2>
+              <pre className="text-xs bg-gray-100 p-3 rounded overflow-x-auto">{JSON.stringify(result.secrets || [], null, 2)}</pre>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
