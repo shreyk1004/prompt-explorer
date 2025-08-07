@@ -8,18 +8,23 @@ import { scanTextForSecrets, type SecretFinding } from "@/lib/secretsScan";
 import { join } from "node:path";
 import { promises as fs, existsSync } from "node:fs";
 
-const bodySchema = z.object({
-  repoUrl: z
-    .string()
-    .min(1)
-    .refine(
-      (url) => /^(https:\/\/|git@).+\.(git)?/.test(url) || /^(https:\/\/github\.com\/)[\w.-]+\/[\w.-]+(\.git)?$/.test(url),
-      {
-        message: "repoUrl must be a valid Git URL or GitHub HTTPS URL",
-      }
-    ),
-  branch: z.string().min(1).max(100).optional().default("main"),
-});
+const bodySchema = z
+  .object({
+    repoUrl: z
+      .string()
+      .min(1)
+      .refine(
+        (url) => /^(https:\/\/|git@).+\.(git)?/.test(url) || /^(https:\/\/github\.com\/)[\w.-]+\/[\w.-]+(\.git)?$/.test(url),
+        { message: "repoUrl must be a valid Git URL or GitHub HTTPS URL" }
+      )
+      .optional(),
+    localPath: z.string().min(1).optional(),
+    branch: z.string().min(1).max(100).optional().default("main"),
+  })
+  .refine((v) => Boolean(v.repoUrl || v.localPath), {
+    message: "Provide either repoUrl or localPath",
+    path: ["repoUrl"],
+  });
 
 function getClientIp(req: NextRequest): string {
   const xff = req.headers.get("x-forwarded-for");
@@ -87,27 +92,49 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  // Prepare workspace dir
-  const reposBase = join(process.cwd(), ".data", "repos");
-  const repoName = body.repoUrl.split("/").pop()?.replace(/\.git$/, "") || "repo";
-  const targetDir = join(reposBase, repoName);
-  try {
-    await fs.mkdir(reposBase, { recursive: true });
-  } catch {}
-
-  try {
-    await cloneOrPullRepo({ repoUrl: body.repoUrl, destDir: reposBase, branch: body.branch });
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error);
-    return new Response(JSON.stringify({ error: `Failed to clone/pull repo: ${message}` }), {
+  // Determine target directory: localPath (if provided) or clone repo
+  let targetDir: string;
+  if (body.localPath) {
+    targetDir = body.localPath;
+    try {
+      const stat = await fs.stat(targetDir);
+      if (!stat.isDirectory()) {
+        return new Response(JSON.stringify({ error: "localPath must be a directory" }), {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        });
+      }
+    } catch {
+      return new Response(JSON.stringify({ error: "localPath does not exist" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+  } else if (body.repoUrl) {
+    const reposBase = join(process.cwd(), ".data", "repos");
+    const repoName = body.repoUrl.split("/").pop()?.replace(/\.git$/, "") || "repo";
+    targetDir = join(reposBase, repoName);
+    try {
+      await fs.mkdir(reposBase, { recursive: true });
+    } catch {}
+    try {
+      await cloneOrPullRepo({ repoUrl: body.repoUrl, destDir: reposBase, branch: body.branch });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      return new Response(JSON.stringify({ error: `Failed to clone/pull repo: ${message}` }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
+    }
+    if (!existsSync(targetDir)) {
+      return new Response(JSON.stringify({ error: "Repository target path not found after clone" }), {
+        status: 500,
+        headers: { "content-type": "application/json" },
+      });
+    }
+  } else {
+    return new Response(JSON.stringify({ error: "Provide repoUrl or localPath" }), {
       status: 400,
-      headers: { "content-type": "application/json" },
-    });
-  }
-
-  if (!existsSync(targetDir)) {
-    return new Response(JSON.stringify({ error: "Repository target path not found after clone" }), {
-      status: 500,
       headers: { "content-type": "application/json" },
     });
   }
@@ -140,7 +167,7 @@ export async function POST(req: NextRequest) {
   return new Response(
     JSON.stringify({
       ok: true,
-      repo: { url: body.repoUrl, branch: body.branch, path: targetDir },
+      repo: { url: body.repoUrl ?? null, branch: body.branch, path: targetDir },
       extracted: {
         python: pythonPrompts,
       },

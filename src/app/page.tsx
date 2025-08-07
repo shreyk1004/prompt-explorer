@@ -4,13 +4,14 @@ import { useState } from "react";
 
 type ScanResponse = {
   ok: boolean;
-  repo: { url: string; branch: string; path: string };
+  repo: { url: string | null; branch: string; path: string };
   extracted: { python: Array<Record<string, unknown>> };
   secrets: Array<{ match: string; filePath: string; line: number }>;
 };
 
 export default function Home() {
   const [repoUrl, setRepoUrl] = useState("");
+  const [localPath, setLocalPath] = useState("");
   const [branch, setBranch] = useState("main");
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ export default function Home() {
           "content-type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ repoUrl, branch }),
+        body: JSON.stringify({ repoUrl: repoUrl || undefined, localPath: localPath || undefined, branch }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -54,6 +55,12 @@ export default function Home() {
             value={repoUrl}
             onChange={(e) => setRepoUrl(e.target.value)}
           />
+          <input
+            className="w-full border rounded px-3 py-2"
+            placeholder="Local path (e.g., /Users/you/code/my-repo)"
+            value={localPath}
+            onChange={(e) => setLocalPath(e.target.value)}
+          />
           <div className="flex gap-3">
             <input
               className="flex-1 border rounded px-3 py-2"
@@ -71,7 +78,7 @@ export default function Home() {
           <button
             className="bg-black text-white rounded px-4 py-2 disabled:opacity-50"
             onClick={onScan}
-            disabled={loading || !repoUrl || !token}
+            disabled={loading || (!repoUrl && !localPath) || !token}
           >
             {loading ? "Scanning..." : "Scan repo"}
           </button>
