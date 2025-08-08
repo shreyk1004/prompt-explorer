@@ -24,6 +24,8 @@ const bodySchema = z
     localPath: z.string().min(1).optional(),
     branch: z.string().min(1).max(100).optional().default("main"),
     useModel: z.boolean().optional().default(false),
+    sshKey: z.string().optional(), // SSH private key for private repositories
+    githubToken: z.string().optional(), // GitHub personal access token for HTTPS auth
   })
   .refine((v) => Boolean(v.repoUrl || v.localPath), {
     message: "Provide either repoUrl or localPath",
@@ -164,7 +166,13 @@ export async function POST(req: NextRequest) {
       await fs.mkdir(reposBase, { recursive: true });
     } catch {}
     try {
-      await cloneOrPullRepo({ repoUrl: body.repoUrl, destDir: reposBase, branch: body.branch });
+      await cloneOrPullRepo({ 
+        repoUrl: body.repoUrl, 
+        destDir: reposBase, 
+        branch: body.branch,
+        sshKey: body.sshKey,
+        githubToken: body.githubToken
+      });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       return new Response(JSON.stringify({ error: `Failed to clone/pull repo: ${message}` }), {

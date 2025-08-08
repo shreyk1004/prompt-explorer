@@ -104,6 +104,8 @@ export default function Home() {
   const [localPath, setLocalPath] = useState("");
   const [branch, setBranch] = useState("main");
   const [token, setToken] = useState("");
+  const [sshKey, setSshKey] = useState("");
+  const [githubToken, setGithubToken] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +124,9 @@ export default function Home() {
       repoUrl: repoUrl || undefined,
       localPath: localPath || undefined,
       branch,
-      hasToken: !!token
+      hasToken: !!token,
+      hasSshKey: !!sshKey,
+      hasGithubToken: !!githubToken
     });
     
     setLoading(true);
@@ -135,7 +139,14 @@ export default function Home() {
           "content-type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ repoUrl: repoUrl || undefined, localPath: localPath || undefined, branch, useModel }),
+        body: JSON.stringify({ 
+          repoUrl: repoUrl || undefined, 
+          localPath: localPath || undefined, 
+          branch, 
+          useModel,
+          sshKey: sshKey || undefined,
+          githubToken: githubToken || undefined
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -191,6 +202,22 @@ export default function Home() {
               placeholder="JWT (Authorization Bearer)"
               value={token}
               onChange={(e) => setToken(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-3">
+            <input
+              className="flex-1 border rounded px-3 py-2"
+              placeholder="SSH Private Key (for private repos)"
+              value={sshKey}
+              onChange={(e) => setSshKey(e.target.value)}
+              type="password"
+            />
+            <input
+              className="flex-1 border rounded px-3 py-2"
+              placeholder="GitHub Token (for private repos)"
+              value={githubToken}
+              onChange={(e) => setGithubToken(e.target.value)}
+              type="password"
             />
           </div>
           <div className="flex gap-3">
