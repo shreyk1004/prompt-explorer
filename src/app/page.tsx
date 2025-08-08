@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 type FileTreeNode = {
   name: string;
@@ -225,7 +225,7 @@ export default function Home() {
               />
             </div>
             <div className="text-xs text-gray-500">
-              💡 <strong>GitHub Token:</strong> Create at github.com/settings/tokens (select "repo" scope) | 
+              💡 <strong>GitHub Token:</strong> Create at github.com/settings/tokens (select &quot;repo&quot; scope) | 
               <strong>SSH Key:</strong> Use your existing ~/.ssh/id_rsa file
             </div>
           </div>
